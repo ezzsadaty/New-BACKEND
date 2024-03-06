@@ -12,7 +12,13 @@ class Person(models.Model):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     birth_date = models.DateField()
-    created_at = models.DateTimeField(auto_now_add=True)    
+    created_at = models.DateTimeField(auto_now_add=True)
+    email = models.EmailField(max_length=254)
+    photo = models.ImageField(upload_to='photos/')  
+    def save(self, *args, **kwargs):
+        if not self.photo:
+            raise ValueError("Photo field cannot be empty")
+        super().save(*args, **kwargs)
 
 class Community(models.Model):
     name = models.CharField(max_length=255)
