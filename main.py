@@ -13,6 +13,12 @@ mtcnn0 = MTCNN(image_size=240, margin=0, keep_all=False, min_face_size=40)
 mtcnn = MTCNN(image_size=240, margin=0, keep_all=True, min_face_size=40)
 resnet = InceptionResnetV1(pretrained='vggface2').eval()
 
+print(torch.__version__)
+print(torch.version.cuda)
+print(torch.cuda.is_available())
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"Running on device: {device}")
+
 dataset = datasets.ImageFolder('photos')
 idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
 
