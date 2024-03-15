@@ -8,34 +8,46 @@ import time
 import threading
 import os
 
-# Your existing initialization code for MTCNN, InceptionResnetV1, dataset, and embeddings
+# Initialization for MTCNN, InceptionResnetV1, dataset, and embeddings
 mtcnn0 = MTCNN(image_size=240, margin=0, keep_all=False, min_face_size=40)
 mtcnn = MTCNN(image_size=240, margin=0, keep_all=True, min_face_size=40)
 resnet = InceptionResnetV1(pretrained='vggface2').eval()
-
-print(torch.__version__)
-print(torch.version.cuda)
-print(torch.cuda.is_available())
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f"Running on device: {device}")
-
+exit_program = False
 dataset = datasets.ImageFolder('photos')
 idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
+def collate_fn(x):
+    return x[0]
 
-# Load saved data for embeddings and names
+loader = DataLoader(dataset, collate_fn=collate_fn)
+
+name_list = []
+embedding_list = []
+
+for img, idx in loader:
+    face, prob = mtcnn0(img, return_prob=True)
+    if face is not None and prob > 0.92:
+        emb = resnet(face.unsqueeze(0))
+        embedding_list.append(emb.detach())
+        name_list.append(idx_to_class[idx])
+
+# Save and load data for embeddings and names
+data = [embedding_list, name_list]
+torch.save(data, 'data.pt')
 load_data = torch.load('data.pt')
 embedding_list, name_list = load_data
 
-min_distance_threshold = 0.9
+min_distance_threshold = 1
 
 person_records = {}
 last_seen = {}
+camera_records = {}  # Dictionary to hold lists of records for each camera
 
-def camera_feed_process(camera_index):
+def camera_feed_process(camera_index, exit_signal):
+    global person_records, camera_records
     cam = cv2.VideoCapture(camera_index)
-    window_name = f"Camera {camera_index}"  # Dynamic window name based on camera index
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)  # Create a window for each camera
-    while True:
+    window_name = f"Camera {camera_index}"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    while not exit_signal.is_set():
         ret, frame = cam.read()
         if not ret:
             print(f"Failed to grab frame from camera {camera_index}, try again")
@@ -43,8 +55,6 @@ def camera_feed_process(camera_index):
 
         img = Image.fromarray(frame)
         img_cropped_list, prob_list = mtcnn(img, return_prob=True)
-
-        # Display the original frame before any face processing
         cv2.imshow(window_name, frame)
 
         current_seen_names = []
@@ -53,59 +63,75 @@ def camera_feed_process(camera_index):
             boxes, _ = mtcnn.detect(img)
 
             for i, (img_cropped, prob) in enumerate(zip(img_cropped_list, prob_list)):
-                if prob > 0.95:
+                if prob > 0.9:
                     emb = resnet(img_cropped.unsqueeze(0)).detach()
-
-                    dist_list = []
-                    for idx, emb_db in enumerate(embedding_list):
-                        dist = torch.dist(emb, emb_db).item()
-                        dist_list.append(dist)
-
+                    dist_list = [torch.dist(emb, emb_db).item() for emb_db in embedding_list]
                     min_dist = min(dist_list)
-                    min_dist_idx = dist_list.index(min_dist)
-                    name = name_list[min_dist_idx]
+                    if min_dist > min_distance_threshold:
+                        name = "Unknown"
+                    else:
+                        min_dist_idx = dist_list.index(min_dist)
+                        name = name_list[min_dist_idx]
 
                     current_seen_names.append(name)
-
                     box = boxes[i]
-
                     frame = cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (0, 255, 0), 2)
                     cv2.putText(frame, name, (int(box[0]), int(box[1]-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
 
-                    if min_dist < min_distance_threshold:
+                    if name != "Unknown":
                         if name not in person_records or (name in person_records and person_records[name]['exit_time'] is not None):
-                            person_records[name] = {'entry_time': time.time(), 'exit_time': None}
-                            print(f'{name} entered at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}')
-                        last_seen[name] = 0
+                            entry_time = time.time()
+                            person_records[name] = {'entry_time': entry_time, 'exit_time': None, 'camera_index': camera_index}
+                            print(f'{name} entered at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())} from camera {camera_index}')
+                            camera_records.setdefault(camera_index, []).append((name, entry_time, None))
+                        last_seen[name] = {'count': 0, 'camera_index': camera_index}
 
-        for name in list(last_seen.keys()):
-            if name not in current_seen_names:
-                last_seen[name] += 1
-                if last_seen[name] > 30:
-                    if name in person_records and person_records[name]['exit_time'] is None:
-                        person_records[name]['exit_time'] = time.time()
-                        print(f'{name} exited at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}')
+        # Adjusted for camera index specific exit logic
+        for name, info in list(last_seen.items()):
+            if name not in current_seen_names and info['camera_index'] == camera_index:
+                last_seen[name]['count'] += 1
+                if last_seen[name]['count'] > 30:
+                    if name in person_records and person_records[name]['exit_time'] is None and person_records[name]['camera_index'] == camera_index:
+                        exit_time = time.time()
+                        person_records[name]['exit_time'] = exit_time
+                        print(f'{name} exited at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())} from camera {camera_index}')
+                        for record in camera_records[camera_index]:
+                            if record[0] == name and record[2] is None:  # Find the matching record and update the exit time
+                                camera_records[camera_index].append((name, record[1], exit_time))
+                                camera_records[camera_index].remove(record)
+                                break
                     del last_seen[name]
-            else:
-                last_seen[name] = 0
+            elif name in current_seen_names:
+                last_seen[name] = {'count': 0, 'camera_index': camera_index}
 
         cv2.imshow(window_name, frame)
-        k = cv2.waitKey(1)
-        if k % 256 == 27:  # ESC key
-            print(f'Esc pressed, closing camera {camera_index}...')
-            break
+        if cv2.waitKey(1) & 0xFF == 27:  # Check for ESC press
+            exit_signal.set()
 
     cam.release()
-    cv2.destroyAllWindows()
+    cv2.destroyWindow(window_name)
 
 if __name__ == "__main__":
+    exit_signal = threading.Event()
     available_indices = [index for index in range(5) if cv2.VideoCapture(index).isOpened()]
 
     threads = []
     for index in available_indices:
-        thread = threading.Thread(target=camera_feed_process, args=(index,))
+        thread = threading.Thread(target=camera_feed_process, args=(index, exit_signal))
         threads.append(thread)
         thread.start()
 
+    while not exit_signal.is_set():
+        time.sleep(0.1)  # Reduce CPU usage
+
     for thread in threads:
         thread.join()
+
+    cv2.destroyAllWindows()  # Ensure all windows are closed here
+    for camera_index in camera_records:
+            print(f"\nRecords for Camera {camera_index}:")
+            for record in camera_records[camera_index]:
+                person, entry_time, exit_time = record
+                entry_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(entry_time))
+                exit_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(exit_time)) if exit_time else "Still inside"
+                print(f"{person} entered at {entry_str} and exited at {exit_str}")
