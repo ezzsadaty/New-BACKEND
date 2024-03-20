@@ -1,6 +1,11 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from .models import Location, Camera, Person, Community, UsersInCommunity, Camera_History, SecurityPersonnel, Admin
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.views.decorators.csrf import csrf_exempt
+from .models import Camera_History, Person, Camera
+import json
+from django.utils.dateparse import parse_date
 
 def location_list(request):
     locations = Location.objects.all()
@@ -42,3 +47,108 @@ def admin_list(request):
     admins = Admin.objects.all()
     data = [{'first_name': admin.first_name, 'last_name': admin.last_name, 'created_at': admin.created_at, 'birth_date': admin.birth_date} for admin in admins]
     return JsonResponse(data, safe=False)
+
+@csrf_exempt  # Note: Be cautious with CSRF exemption in production
+def add_camera_history(request):
+    if request.method == 'POST':
+        # Parse the JSON body of the request
+        try:
+            data = json.loads(request.body)
+            person_name = data.get('name')
+            person_id = data.get('id')
+            checkIn_time = data.get('checkIn_time')
+            checkOut_time = data.get('checkOut_time')
+            camera_id = data.get('camera_id')
+
+            # Validate and fetch related instances
+            person = Person.objects.filter(id=person_id, first_name=person_name).first()
+            camera = Camera.objects.filter(id=camera_id).first()
+            
+            if not person or not camera:
+                return HttpResponseBadRequest("Invalid person ID/name or camera ID provided.")
+
+            # Create the Camera_History record
+            camera_history = Camera_History(person=person, camera=camera, checkIn_time=checkIn_time, checkOut_time=checkOut_time)
+            camera_history.save()
+
+            # Return success response
+            return JsonResponse({'success': True, 'message': 'Camera history record added successfully.'})
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error processing request: {str(e)}")
+    else:
+        # If not a POST request, return a 405 Method Not Allowed response
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+
+@csrf_exempt
+def add_security_personnel(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            first_name = data['first_name']
+            last_name = data['last_name']
+            birth_date = parse_date(data['birth_date'])
+            
+            security_personnel = SecurityPersonnel(
+                first_name=first_name,
+                last_name=last_name,
+                birth_date=birth_date
+            )
+            security_personnel.save()
+
+            return JsonResponse({'success': True, 'message': 'Security personnel added successfully.'})
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error processing request: {str(e)}")
+    else:
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+    
+@csrf_exempt
+def add_admin(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            first_name = data['first_name']
+            last_name = data['last_name']
+            birth_date = parse_date(data['birth_date'])
+            created_at = parse_date(data['created_at'])
+
+            admin = Admin(
+                first_name=first_name,
+                last_name=last_name,
+                birth_date=birth_date,
+                created_at=created_at
+            )
+            admin.save()
+
+            return JsonResponse({'success': True, 'message': 'Admin added successfully.'})
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error processing request: {str(e)}")
+    else:
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def add_person(request):
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        birth_date = request.POST.get('birth_date')
+        email = request.POST.get('email')
+        photo = request.FILES.get('photo')
+
+        # Convert birth_date from string to date object
+        birth_date_obj = parse_date(birth_date)
+
+        # Assuming validation for each field is done here
+        person = Person(
+            first_name=first_name,
+            last_name=last_name,
+            birth_date=birth_date_obj,
+            email=email,
+            photo=photo
+        )
+
+        # The save method in your Person model already handles the logic for the photo
+        person.save()
+        return JsonResponse({'status': 'success', 'person_id': person.id})
+
+    return JsonResponse({'error': 'This method is not allowed'}, status=405)
