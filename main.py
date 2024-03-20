@@ -82,7 +82,6 @@ def camera_feed_process(camera_index, exit_signal):
                         if name not in person_records or (name in person_records and person_records[name]['exit_time'] is not None):
                             entry_time = time.time()
                             person_records[name] = {'entry_time': entry_time, 'exit_time': None, 'camera_index': camera_index}
-                            print(f'{name} entered at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())} from camera {camera_index}')
                             camera_records.setdefault(camera_index, []).append((name, entry_time, None))
                         last_seen[name] = {'count': 0, 'camera_index': camera_index}
 
@@ -90,11 +89,11 @@ def camera_feed_process(camera_index, exit_signal):
         for name, info in list(last_seen.items()):
             if name not in current_seen_names and info['camera_index'] == camera_index:
                 last_seen[name]['count'] += 1
-                if last_seen[name]['count'] > 30:
+                if last_seen[name]['count'] > 100:
                     if name in person_records and person_records[name]['exit_time'] is None and person_records[name]['camera_index'] == camera_index:
                         exit_time = time.time()
                         person_records[name]['exit_time'] = exit_time
-                        print(f'{name} exited at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())} from camera {camera_index}')
+                        print(f'{name} entered at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(entry_time))} and exited at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(exit_time))} from camera {camera_index}')
                         for record in camera_records[camera_index]:
                             if record[0] == name and record[2] is None:  # Find the matching record and update the exit time
                                 camera_records[camera_index].append((name, record[1], exit_time))
