@@ -10,14 +10,17 @@ class Camera(models.Model):
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
 
 def get_photo_path(instance, filename):
-    # Generate the filename using the first name of the person
-    first_name = instance.first_name
+    # Ensure instance has an ID (this function should only be called after saving the instance without the photo)
+    if not instance.id:
+        raise ValueError("The instance must be saved to generate an ID before calling get_photo_path.")
+
     # Get the file extension
     ext = filename.split('.')[-1]
-    # Generate the filename: <first_name>.<ext>
-    filename = f"{first_name}.{ext}"
-    # Return the path to upload the file
-    return os.path.join('photos', filename)
+    # Generate the directory and filename using the first name and ID of the person
+    directory = f"{instance.first_name}_{instance.id}"
+    filename = f"{directory}.{ext}"
+    # Return the path, including the directory and filename
+    return os.path.join('photos', directory, filename)
 
 class Person(models.Model):
     first_name = models.CharField(max_length=255)
@@ -26,10 +29,21 @@ class Person(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     email = models.EmailField(max_length=254)
     photo = models.ImageField(upload_to=get_photo_path)  
+
     def save(self, *args, **kwargs):
+        # Check if creating a new instance; if so, temporarily save without the photo
+        if not self.id:  # No ID means the instance is not saved yet (it's new)
+            photo_file = self.photo
+            self.photo = None  # Temporarily remove the photo
+            super().save(*args, **kwargs)  # Save, so the instance gets an ID
+            self.photo = photo_file
+
         if not self.photo:
             raise ValueError("Photo field cannot be empty")
+
+        # For new and existing instances, re-save with the photo now that we have an ID
         super().save(*args, **kwargs)
+
 
 class Community(models.Model):
     name = models.CharField(max_length=255)
@@ -41,12 +55,6 @@ class UsersInCommunity(models.Model):
     Community_ID = models.ForeignKey(Community, on_delete=models.CASCADE)
     join_date = models.DateField()
 
-class Person_History(models.Model):
-    person = models.ForeignKey(Person, on_delete=models.CASCADE)
-    location = models.ForeignKey(Location, on_delete=models.CASCADE)
-    camera = models.ForeignKey(Camera, on_delete=models.CASCADE)
-    checkIn_time = models.DateTimeField()
-    checkOut_time = models.DateTimeField()
 
 class Camera_History(models.Model):
     person = models.ForeignKey(Person, on_delete=models.CASCADE)

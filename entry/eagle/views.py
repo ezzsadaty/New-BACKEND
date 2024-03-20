@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
-from .models import Location, Camera, Person, Community, UsersInCommunity, Person_History, Camera_History, SecurityPersonnel, Admin
+from .models import Location, Camera, Person, Community, UsersInCommunity, Camera_History, SecurityPersonnel, Admin
 
 def location_list(request):
     locations = Location.objects.all()
@@ -27,10 +27,6 @@ def users_in_community_list(request):
     data = [{'person': user.person.first_name, 'Community_ID': user.Community_ID.Community_ID, 'join_date': user.join_date} for user in users_in_community]
     return JsonResponse(data, safe=False)
 
-def person_history_list(request):
-    person_history = Person_History.objects.all()
-    data = [{'person': history.person.first_name, 'location': history.location.name, 'camera': history.camera.name, 'checkIn_time': history.checkIn_time, 'checkOut_time': history.checkOut_time} for history in person_history]
-    return JsonResponse(data, safe=False)
 
 def camera_history_list(request):
     camera_history = Camera_History.objects.all()
