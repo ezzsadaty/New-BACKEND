@@ -59,10 +59,13 @@ def add_camera_history(request):
             checkIn_time = data.get('checkIn_time')
             checkOut_time = data.get('checkOut_time')
             camera_id = data.get('camera_id')
+            print(data)
+            print(checkIn_time)
+            Cid = camera_id+1
 
             # Validate and fetch related instances
             person = Person.objects.filter(id=person_id, first_name=person_name).first()
-            camera = Camera.objects.filter(id=camera_id).first()
+            camera = Camera.objects.filter(id=Cid).first()
             
             if not person or not camera:
                 return HttpResponseBadRequest("Invalid person ID/name or camera ID provided.")

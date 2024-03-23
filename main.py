@@ -7,13 +7,15 @@ import cv2
 import time
 import threading
 import os
+import requests
+import json
 
 # Initialization for MTCNN, InceptionResnetV1, dataset, and embeddings
 mtcnn0 = MTCNN(image_size=240, margin=0, keep_all=False, min_face_size=40)
 mtcnn = MTCNN(image_size=240, margin=0, keep_all=True, min_face_size=40)
 resnet = InceptionResnetV1(pretrained='vggface2').eval()
 exit_program = False
-dataset = datasets.ImageFolder('photos')
+dataset = datasets.ImageFolder('entry/media/photos')
 idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
 def collate_fn(x):
     return x[0]
@@ -41,6 +43,16 @@ min_distance_threshold = 1
 person_records = {}
 last_seen = {}
 camera_records = {}  # Dictionary to hold lists of records for each camera
+
+def send_to_backend(person_data):
+    backend_url = "http://127.0.0.1:8000/camera-history/add/"
+    # Note the change here: using the json parameter instead of data and removing the manual headers
+    print(person_data)  # Ensure this print statement is within the function scope
+    response = requests.post(backend_url, json=person_data)
+    if response.status_code == 201:
+        print("Data sent to the backend successfully.")
+    else:
+        print(f"Failed to send data to the backend. Status code: {response.status_code}")
 
 def camera_feed_process(camera_index, exit_signal):
     global person_records, camera_records
@@ -80,7 +92,7 @@ def camera_feed_process(camera_index, exit_signal):
 
                     if name != "Unknown":
                         if name not in person_records or (name in person_records and person_records[name]['exit_time'] is not None):
-                            entry_time = time.time()
+                            entry_time = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                             person_records[name] = {'entry_time': entry_time, 'exit_time': None, 'camera_index': camera_index}
                             camera_records.setdefault(camera_index, []).append((name, entry_time, None))
                         last_seen[name] = {'count': 0, 'camera_index': camera_index}
@@ -91,9 +103,22 @@ def camera_feed_process(camera_index, exit_signal):
                 last_seen[name]['count'] += 1
                 if last_seen[name]['count'] > 100:
                     if name in person_records and person_records[name]['exit_time'] is None and person_records[name]['camera_index'] == camera_index:
-                        exit_time = time.time()
+                        exit_time = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                         person_records[name]['exit_time'] = exit_time
-                        print(f'{name} entered at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(entry_time))} and exited at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(exit_time))} from camera {camera_index}')
+                        # Prepare data for sending to backend
+                        name1, id1 = name.split("_")
+                        id1 = int(id1)
+                        person_data = {
+                            'name': name1,
+                            'id' : id1,
+                            'checkIn_time': person_records[name]['entry_time'],
+                            'checkOut_time': person_records[name]['exit_time'],
+                            'camera_id': camera_index
+                        }
+                        # Send data to the backend
+                        send_to_backend(person_data)
+
+                        # print(f'{name} entered at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(entry_time))} and exited at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(exit_time))} from camera {camera_index}')
                         for record in camera_records[camera_index]:
                             if record[0] == name and record[2] is None:  # Find the matching record and update the exit time
                                 camera_records[camera_index].append((name, record[1], exit_time))
