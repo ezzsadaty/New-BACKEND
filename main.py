@@ -49,7 +49,7 @@ def send_to_backend(person_data):
     # Note the change here: using the json parameter instead of data and removing the manual headers
     print(person_data)  # Ensure this print statement is within the function scope
     response = requests.post(backend_url, json=person_data)
-    if response.status_code == 201:
+    if response.status_code == 201 or response.status_code == 200:
         print("Data sent to the backend successfully.")
     else:
         print(f"Failed to send data to the backend. Status code: {response.status_code}")
