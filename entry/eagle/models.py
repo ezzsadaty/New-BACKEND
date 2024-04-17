@@ -29,6 +29,11 @@ class Person(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     email = models.EmailField(max_length=254)
     photo = models.ImageField(upload_to=get_photo_path)  
+    def photo_url(self):
+        if self.photo:
+            return self.photo.url
+        else:
+            return None
 
     def save(self, *args, **kwargs):
         # Check if creating a new instance; if so, temporarily save without the photo
