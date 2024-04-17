@@ -32,6 +32,7 @@ def person_detail(request,pk):
     try:
         person = Person.objects.get(pk=pk)
         data = {
+            'id': person.pk,
             'first_name': person.first_name,
             'last_name': person.last_name,
             'birth_date': person.birth_date,
