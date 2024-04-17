@@ -3,13 +3,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from .views import (
     location_list, camera_list, person_list, community_list, users_in_community_list
-    , camera_history_list, security_personnel_list, admin_list ,add_camera_history,add_security_personnel,add_admin
+    ,person_detail, camera_history_list, security_personnel_list, admin_list ,add_camera_history,add_security_personnel,add_admin
 )
 
 urlpatterns = [
     path('locations/', location_list, name='location-list'),
     path('cameras/', camera_list, name='camera-list'),
     path('persons/', person_list, name='person-list'),
+    path('persons/<int:pk>/', person_detail, name='person-detail'),
     path('communities/', community_list, name='community-list'),
     path('users-in-community/', users_in_community_list, name='users-in-community-list'),
     #path('person-history/', person_history_list, name='person-history-list'),

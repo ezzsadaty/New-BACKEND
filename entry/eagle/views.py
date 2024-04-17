@@ -24,10 +24,24 @@ def camera_list(request):
 def person_list(request):
     persons = Person.objects.all()
     data = [{'id': person.pk,  'first_name': person.first_name, 'last_name': person.last_name,
-             'birth_date': person.birth_date, 'created_at': person.created_at ,
-             'photo_url': person.photo.url if person.photo else None} for person in persons]
+            'birth_date': person.birth_date, 'created_at': person.created_at ,
+            'photo_url': person.photo.url if person.photo else None} for person in persons]
     return JsonResponse(data, safe=False)
 
+def person_detail(request,pk):
+    try:
+        person = Person.objects.get(pk=pk)
+        data = {
+            'first_name': person.first_name,
+            'last_name': person.last_name,
+            'birth_date': person.birth_date,
+            'created_at': person.created_at,
+            'email': person.email,
+            'photo_url': person.photo.url if person.photo else None
+        }
+        return JsonResponse(data)
+    except Person.DoesNotExist:
+        return JsonResponse({'error': 'Person not found'}, status=404)
 
 def community_list(request):
     communities = Community.objects.all()
