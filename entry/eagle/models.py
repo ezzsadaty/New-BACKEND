@@ -29,6 +29,7 @@ class Person(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     email = models.EmailField(max_length=254)
     photo = models.ImageField(upload_to=get_photo_path)  
+    
     def photo_url(self):
         if self.photo:
             return self.photo.url
@@ -59,7 +60,6 @@ class UsersInCommunity(models.Model):
     person = models.ForeignKey(Person, on_delete=models.CASCADE)
     Community_ID = models.ForeignKey(Community, on_delete=models.CASCADE)
     join_date = models.DateField()
-
 
 class Camera_History(models.Model):
     person = models.ForeignKey(Person, on_delete=models.CASCADE)
