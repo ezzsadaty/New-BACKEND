@@ -1,6 +1,7 @@
 
 import os
 from django.db import models
+from django.contrib.auth.hashers import make_password
 
 class Location(models.Model):
     name = models.CharField(max_length=255)
@@ -29,6 +30,8 @@ class Person(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     email = models.EmailField(max_length=254)
     photo = models.ImageField(upload_to=get_photo_path)  
+    username = models.CharField(max_length=150, unique=True)
+    password = models.CharField(max_length=128)
     
     def photo_url(self):
         if self.photo:
@@ -46,7 +49,8 @@ class Person(models.Model):
 
         if not self.photo:
             raise ValueError("Photo field cannot be empty")
-
+        if self.password:
+            self.password = make_password(self.password)
         # For new and existing instances, re-save with the photo now that we have an ID
         super().save(*args, **kwargs)
 
