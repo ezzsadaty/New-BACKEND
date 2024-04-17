@@ -24,7 +24,8 @@ def camera_list(request):
 def person_list(request):
     persons = Person.objects.all()
     data = [{'id': person.pk,  'first_name': person.first_name, 'last_name': person.last_name,
-             'birth_date': person.birth_date, 'created_at': person.created_at} for person in persons]
+             'birth_date': person.birth_date, 'created_at': person.created_at ,
+             'photo_url': person.photo.url if person.photo else None} for person in persons]
     return JsonResponse(data, safe=False)
 
 
