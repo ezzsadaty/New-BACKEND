@@ -24,11 +24,12 @@ def camera_list(request):
 def person_list(request):
     persons = Person.objects.all()
     data = [{'id': person.pk,  'first_name': person.first_name, 'last_name': person.last_name,
-            'birth_date': person.birth_date, 'created_at': person.created_at ,
-            'photo_url': person.photo.url if person.photo else None} for person in persons]
+            'birth_date': person.birth_date, 'created_at': person.created_at,
+             'photo_url': person.photo.url if person.photo else None} for person in persons]
     return JsonResponse(data, safe=False)
 
-def person_detail(request,pk):
+
+def person_detail(request, pk):
     try:
         person = Person.objects.get(pk=pk)
         data = {
@@ -44,6 +45,7 @@ def person_detail(request,pk):
     except Person.DoesNotExist:
         return JsonResponse({'error': 'Person not found'}, status=404)
 
+
 def community_list(request):
     communities = Community.objects.all()
     data = [{'name': community.name, 'Community_ID': community.Community_ID}
@@ -51,13 +53,14 @@ def community_list(request):
     return JsonResponse(data, safe=False)
 
 
+@csrf_exempt
 def create_community(request):
     if request.method == 'POST':
         # Decode JSON data from request body
         data = json.loads(request.body)
         # Extract data for creating a new community
         name = data.get('name')
-        community_id = data.get('Community_ID')
+        community_id = data.get('community_id')
         # Create a new community object
         community = Community(name=name, Community_ID=community_id)
         community.save()
@@ -67,11 +70,13 @@ def create_community(request):
         # Return an error response for unsupported methods
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
+
 def users_in_community_list(request):
     users_in_community = UsersInCommunity.objects.all()
     data = [{'person': user.person.first_name, 'Community_ID': user.Community_ID.Community_ID,
              'join_date': user.join_date} for user in users_in_community]
     return JsonResponse(data, safe=False)
+
 
 @csrf_exempt
 def add_user_to_community(request):
@@ -90,7 +95,8 @@ def add_user_to_community(request):
             community = Community.objects.get(pk=community_id)
 
             # Create a new UsersInCommunity object
-            user_in_community = UsersInCommunity(person=person, Community_ID=community, join_date=join_date)
+            user_in_community = UsersInCommunity(
+                person=person, Community_ID=community, join_date=join_date)
             user_in_community.save()
 
             # Return a success response
@@ -101,7 +107,8 @@ def add_user_to_community(request):
     else:
         # Return an error response for unsupported methods
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
+
 def camera_history_list(request):
     camera_history = Camera_History.objects.all()
     data = [{'person': history.person.first_name, 'camera': history.camera.name,
