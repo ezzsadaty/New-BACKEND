@@ -5,13 +5,14 @@ from .views import (
     location_list, camera_list, person_list, community_list, users_in_community_list
     ,person_detail, camera_history_list, security_personnel_list, admin_list ,
     add_camera_history,add_security_personnel,add_admin,create_community,
-    add_user_to_community,
+    add_user_to_community,add_person,
 )
 
 urlpatterns = [
     path('locations/', location_list, name='location-list'),
     path('cameras/', camera_list, name='camera-list'),
     path('persons/', person_list, name='person-list'),
+    path('Signup/',add_person , name='add-person'),
     path('persons/<int:pk>/', person_detail, name='person-detail'),
     path('communities/', community_list, name='community-list'),
     path('communities/create/', create_community, name='create-community'),
