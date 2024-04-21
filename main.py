@@ -91,7 +91,7 @@ def camera_feed_process(camera_index, exit_signal):
                     box = boxes[i]
                     frame = cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (0, 255, 0), 2)
                     cv2.putText(frame, name, (int(box[0]), int(box[1]-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
-                   
+                   ##
                     if name != "Unknown":
                         if name not in person_records or (name in person_records and person_records[name]['exit_time'] is not None):
                             entry_time = time.strftime("%Y-%m-%dT%H:%M:%SZ")
