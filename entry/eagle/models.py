@@ -1,6 +1,7 @@
 
 import os
 from django.db import models
+from django.contrib.auth.hashers import make_password
 
 class Location(models.Model):
     name = models.CharField(max_length=255)
@@ -28,7 +29,16 @@ class Person(models.Model):
     birth_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     email = models.EmailField(max_length=254)
-    photo = models.ImageField(upload_to=get_photo_path)  
+    photo = models.ImageField(upload_to=get_photo_path)
+
+    username = models.CharField(max_length=150,null=False,blank=False, unique=True)
+    password = models.CharField(max_length=128,null=False,blank=False)
+
+    def photo_url(self):
+        if self.photo:
+            return self.photo.url
+        else:
+            return None
 
     def save(self, *args, **kwargs):
         # Check if creating a new instance; if so, temporarily save without the photo
@@ -40,7 +50,8 @@ class Person(models.Model):
 
         if not self.photo:
             raise ValueError("Photo field cannot be empty")
-
+        if self.password:
+            self.password = make_password(self.password)
         # For new and existing instances, re-save with the photo now that we have an ID
         super().save(*args, **kwargs)
 
@@ -54,7 +65,6 @@ class UsersInCommunity(models.Model):
     person = models.ForeignKey(Person, on_delete=models.CASCADE)
     Community_ID = models.ForeignKey(Community, on_delete=models.CASCADE)
     join_date = models.DateField()
-
 
 class Camera_History(models.Model):
     person = models.ForeignKey(Person, on_delete=models.CASCADE)

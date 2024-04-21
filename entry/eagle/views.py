@@ -6,47 +6,131 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Camera_History, Person, Camera
 import json
 from django.utils.dateparse import parse_date
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.hashers import make_password
+
 
 def location_list(request):
     locations = Location.objects.all()
     data = [{'name': location.name} for location in locations]
     return JsonResponse(data, safe=False)
 
+
 def camera_list(request):
     cameras = Camera.objects.all()
-    data = [{'name': camera.name, 'location': camera.location.name} for camera in cameras]
+    data = [{'name': camera.name, 'location': camera.location.name}
+            for camera in cameras]
     return JsonResponse(data, safe=False)
+
 
 def person_list(request):
     persons = Person.objects.all()
-    data = [{'first_name': person.first_name, 'last_name': person.last_name, 'birth_date': person.birth_date, 'created_at': person.created_at} for person in persons]
+    data = [{'id': person.pk,  'first_name': person.first_name, 'last_name': person.last_name,
+            'birth_date': person.birth_date, 'created_at': person.created_at,
+             'photo_url': person.photo.url if person.photo else None} for person in persons]
     return JsonResponse(data, safe=False)
+
+
+def person_detail(request, pk):
+    try:
+        person = Person.objects.get(pk=pk)
+        data = {
+            'id': person.pk,
+            'first_name': person.first_name,
+            'last_name': person.last_name,
+            'birth_date': person.birth_date,
+            'created_at': person.created_at,
+            'email': person.email,
+            'photo_url': person.photo.url if person.photo else None
+        }
+        return JsonResponse(data)
+    except Person.DoesNotExist:
+        return JsonResponse({'error': 'Person not found'}, status=404)
+
 
 def community_list(request):
     communities = Community.objects.all()
-    data = [{'name': community.name, 'Community_ID': community.Community_ID} for community in communities]
+    data = [{'name': community.name, 'Community_ID': community.Community_ID}
+            for community in communities]
     return JsonResponse(data, safe=False)
+
+
+@csrf_exempt
+def create_community(request):
+    if request.method == 'POST':
+        # Decode JSON data from request body
+        data = json.loads(request.body)
+        # Extract data for creating a new community
+        name = data.get('name')
+        community_id = data.get('community_id')
+        # Create a new community object
+        community = Community(name=name, Community_ID=community_id)
+        community.save()
+        # Return a success response
+        return JsonResponse({'message': 'Community created successfully'})
+    else:
+        # Return an error response for unsupported methods
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
 
 def users_in_community_list(request):
     users_in_community = UsersInCommunity.objects.all()
-    data = [{'person': user.person.first_name, 'Community_ID': user.Community_ID.Community_ID, 'join_date': user.join_date} for user in users_in_community]
+    data = [{'person': user.person.first_name, 'Community_ID': user.Community_ID.Community_ID,
+             'join_date': user.join_date} for user in users_in_community]
     return JsonResponse(data, safe=False)
+
+
+@csrf_exempt
+def add_user_to_community(request):
+    if request.method == 'POST':
+        # Decode JSON data from request body
+        data = json.loads(request.body)
+
+        # Extract data for creating a new UsersInCommunity object
+        person_id = data.get('person_id')
+        community_id = data.get('community_id')
+        join_date = data.get('join_date')
+
+        try:
+            # Get person and community objects
+            person = Person.objects.get(pk=person_id)
+            community = Community.objects.get(pk=community_id)
+
+            # Create a new UsersInCommunity object
+            user_in_community = UsersInCommunity(
+                person=person, Community_ID=community, join_date=join_date)
+            user_in_community.save()
+
+            # Return a success response
+            return JsonResponse({'message': 'User added to community successfully'})
+        except (Person.DoesNotExist, Community.DoesNotExist) as e:
+            # Return an error response if person or community does not exist
+            return JsonResponse({'error': 'Person or Community not found'}, status=404)
+    else:
+        # Return an error response for unsupported methods
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 
 def camera_history_list(request):
     camera_history = Camera_History.objects.all()
-    data = [{'person': history.person.first_name, 'camera': history.camera.name, 'checkIn_time': history.checkIn_time, 'checkOut_time': history.checkOut_time} for history in camera_history]
+    data = [{'person': history.person.first_name, 'camera': history.camera.name,
+             'checkIn_time': history.checkIn_time, 'checkOut_time': history.checkOut_time} for history in camera_history]
     return JsonResponse(data, safe=False)
+
 
 def security_personnel_list(request):
     security_personnels = SecurityPersonnel.objects.all()
-    data = [{'first_name': personnel.first_name, 'last_name': personnel.last_name, 'birth_date': personnel.birth_date, 'created_at': personnel.created_at} for personnel in security_personnels]
+    data = [{'first_name': personnel.first_name, 'last_name': personnel.last_name,
+             'birth_date': personnel.birth_date, 'created_at': personnel.created_at} for personnel in security_personnels]
     return JsonResponse(data, safe=False)
+
 
 def admin_list(request):
     admins = Admin.objects.all()
-    data = [{'first_name': admin.first_name, 'last_name': admin.last_name, 'created_at': admin.created_at, 'birth_date': admin.birth_date} for admin in admins]
+    data = [{'first_name': admin.first_name, 'last_name': admin.last_name,
+             'created_at': admin.created_at, 'birth_date': admin.birth_date} for admin in admins]
     return JsonResponse(data, safe=False)
+
 
 @csrf_exempt  # Note: Be cautious with CSRF exemption in production
 def add_camera_history(request):
@@ -64,14 +148,16 @@ def add_camera_history(request):
             Cid = camera_id+1
 
             # Validate and fetch related instances
-            person = Person.objects.filter(id=person_id, first_name=person_name).first()
+            person = Person.objects.filter(
+                id=person_id, first_name=person_name).first()
             camera = Camera.objects.filter(id=Cid).first()
-            
+
             if not person or not camera:
                 return HttpResponseBadRequest("Invalid person ID/name or camera ID provided.")
 
             # Create the Camera_History record
-            camera_history = Camera_History(person=person, camera=camera, checkIn_time=checkIn_time, checkOut_time=checkOut_time)
+            camera_history = Camera_History(
+                person=person, camera=camera, checkIn_time=checkIn_time, checkOut_time=checkOut_time)
             camera_history.save()
 
             # Return success response
@@ -91,7 +177,7 @@ def add_security_personnel(request):
             first_name = data['first_name']
             last_name = data['last_name']
             birth_date = parse_date(data['birth_date'])
-            
+
             security_personnel = SecurityPersonnel(
                 first_name=first_name,
                 last_name=last_name,
@@ -104,7 +190,8 @@ def add_security_personnel(request):
             return HttpResponseBadRequest(f"Error processing request: {str(e)}")
     else:
         return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
-    
+
+
 @csrf_exempt
 def add_admin(request):
     if request.method == 'POST':
@@ -129,6 +216,7 @@ def add_admin(request):
     else:
         return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
 
+
 @csrf_exempt
 def add_person(request):
     if request.method == 'POST':
@@ -137,21 +225,53 @@ def add_person(request):
         birth_date = request.POST.get('birth_date')
         email = request.POST.get('email')
         photo = request.FILES.get('photo')
-
+        username = request.POST.get('username')
+        password = request.POST.get('password')
         # Convert birth_date from string to date object
         birth_date_obj = parse_date(birth_date)
-
+        if Person.objects.filter(username=username).exists() or Person.objects.filter(email=email).exists():
+            return JsonResponse({'error': 'Username or email already exists'}, status=400)
         # Assuming validation for each field is done here
         person = Person(
             first_name=first_name,
             last_name=last_name,
             birth_date=birth_date_obj,
             email=email,
-            photo=photo
+            photo=photo,
+            username=username,
+            password=password,
         )
+        if password:
+            person.password = make_password(password)
+
 
         # The save method in your Person model already handles the logic for the photo
         person.save()
         return JsonResponse({'status': 'success', 'person_id': person.id})
 
     return JsonResponse({'error': 'This method is not allowed'}, status=405)
+
+
+
+@csrf_exempt
+def login_user(request):
+    if request.method == 'POST':
+        # Decode JSON data from request body
+        data = json.loads(request.body)
+
+        # Extract username and password
+        username = data.get('username')
+        password = data.get('password')
+
+        # Authenticate user
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            # Login user
+            login(request, user)
+            return JsonResponse({'message': 'Login successful'})
+        else:
+            return JsonResponse({'error': 'Invalid username or password'}, status=400)
+    else:
+        # Return an error response for unsupported methods
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
