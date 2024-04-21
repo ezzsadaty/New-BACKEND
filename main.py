@@ -21,6 +21,7 @@ def collate_fn(x):
     return x[0]
 
 loader = DataLoader(dataset, collate_fn=collate_fn)
+loader = DataLoader(dataset, collate_fn=collate_fn)
 
 name_list = []
 embedding_list = []
@@ -44,6 +45,7 @@ person_records = {}
 last_seen = {}
 camera_records = {}  # Dictionary to hold lists of records for each camera
 
+
 def send_to_backend(person_data):
     backend_url = "http://127.0.0.1:8000/camera-history/add/"
     # Note the change here: using the json parameter instead of data and removing the manual headers
@@ -57,17 +59,17 @@ def send_to_backend(person_data):
 def camera_feed_process(camera_index, exit_signal):
     global person_records, camera_records
     cam = cv2.VideoCapture(camera_index)
-    window_name = f"Camera {camera_index}"
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    # window_name = f"Camera {camera_index}"
+    # cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
     while not exit_signal.is_set():
         ret, frame = cam.read()
         if not ret:
-            print(f"Failed to grab frame from camera {camera_index}, try again")
+            # print(f"Failed to grab frame from camera {camera_index}, try again")
             break
-
+    
         img = Image.fromarray(frame)
         img_cropped_list, prob_list = mtcnn(img, return_prob=True)
-        cv2.imshow(window_name, frame)
+        # cv2.imshow(window_name, frame)
 
         current_seen_names = []
 
@@ -84,19 +86,19 @@ def camera_feed_process(camera_index, exit_signal):
                     else:
                         min_dist_idx = dist_list.index(min_dist)
                         name = name_list[min_dist_idx]
-
+            
                     current_seen_names.append(name)
                     box = boxes[i]
                     frame = cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (0, 255, 0), 2)
                     cv2.putText(frame, name, (int(box[0]), int(box[1]-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
-                   ##
+
                     if name != "Unknown":
                         if name not in person_records or (name in person_records and person_records[name]['exit_time'] is not None):
                             entry_time = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                             person_records[name] = {'entry_time': entry_time, 'exit_time': None, 'camera_index': camera_index}
                             camera_records.setdefault(camera_index, []).append((name, entry_time, None))
                         last_seen[name] = {'count': 0, 'camera_index': camera_index}
-
+                   
         # Adjusted for camera index specific exit logic
         for name, info in list(last_seen.items()):
             if name not in current_seen_names and info['camera_index'] == camera_index:
@@ -117,7 +119,7 @@ def camera_feed_process(camera_index, exit_signal):
                         }
                         # Send data to the backend
                         send_to_backend(person_data)
-
+        
                         # print(f'{name} entered at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(entry_time))} and exited at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(exit_time))} from camera {camera_index}')
                         for record in camera_records[camera_index]:
                             if record[0] == name and record[2] is None:  # Find the matching record and update the exit time
@@ -128,12 +130,9 @@ def camera_feed_process(camera_index, exit_signal):
             elif name in current_seen_names:
                 last_seen[name] = {'count': 0, 'camera_index': camera_index}
 
-        cv2.imshow(window_name, frame)
-        if cv2.waitKey(1) & 0xFF == 27:  # Check for ESC press
-            exit_signal.set()
+        yield frame
 
     cam.release()
-    cv2.destroyWindow(window_name)
 
 if __name__ == "__main__":
     exit_signal = threading.Event()
