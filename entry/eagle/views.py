@@ -6,6 +6,8 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Camera_History, Person, Camera
 import json
 from django.utils.dateparse import parse_date
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.hashers import make_password
 
 
 def location_list(request):
@@ -223,21 +225,53 @@ def add_person(request):
         birth_date = request.POST.get('birth_date')
         email = request.POST.get('email')
         photo = request.FILES.get('photo')
-
+        username = request.POST.get('username')
+        password = request.POST.get('password')
         # Convert birth_date from string to date object
         birth_date_obj = parse_date(birth_date)
-
+        if Person.objects.filter(username=username).exists() or Person.objects.filter(email=email).exists():
+            return JsonResponse({'error': 'Username or email already exists'}, status=400)
         # Assuming validation for each field is done here
         person = Person(
             first_name=first_name,
             last_name=last_name,
             birth_date=birth_date_obj,
             email=email,
-            photo=photo
+            photo=photo,
+            username=username,
+            password=password,
         )
+        if password:
+            person.password = make_password(password)
+
 
         # The save method in your Person model already handles the logic for the photo
         person.save()
         return JsonResponse({'status': 'success', 'person_id': person.id})
 
     return JsonResponse({'error': 'This method is not allowed'}, status=405)
+
+
+
+@csrf_exempt
+def login_user(request):
+    if request.method == 'POST':
+        # Decode JSON data from request body
+        data = json.loads(request.body)
+
+        # Extract username and password
+        username = data.get('username')
+        password = data.get('password')
+
+        # Authenticate user
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            # Login user
+            login(request, user)
+            return JsonResponse({'message': 'Login successful'})
+        else:
+            return JsonResponse({'error': 'Invalid username or password'}, status=400)
+    else:
+        # Return an error response for unsupported methods
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
