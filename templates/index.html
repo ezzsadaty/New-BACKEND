@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Camera Feeds</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+        }
+        .camera {
+            margin: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #fff;
+        }
+        .camera img {
+            width: 640px; /* Adjust based on your needs */
+            height: 500px; /* Adjust based on your needs */
+        }
+        .camera h2 {
+            font-size: 16px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Live Camera Streams</h1>
+    <div class="container">
+        {% for camera_id in cameras %}
+        <div class="camera">
+            <h2>Camera {{ camera_id }}</h2>
+            <img src="{{ url_for('video_feed', camera_index=camera_id) }}" alt="Camera Feed {{ camera_id }}">
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
