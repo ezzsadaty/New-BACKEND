@@ -228,7 +228,7 @@ def add_person(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
         # Convert birth_date from string to date object
-        birth_date_obj = parse_date(birth_date)
+        birth_date_obj = birth_date
         if Person.objects.filter(username=username).exists() or Person.objects.filter(email=email).exists():
             return JsonResponse({'error': 'Username or email already exists'}, status=400)
         # Assuming validation for each field is done here
@@ -244,13 +244,11 @@ def add_person(request):
         if password:
             person.password = make_password(password)
 
-
         # The save method in your Person model already handles the logic for the photo
         person.save()
         return JsonResponse({'status': 'success', 'person_id': person.id})
 
     return JsonResponse({'error': 'This method is not allowed'}, status=405)
-
 
 
 @csrf_exempt
