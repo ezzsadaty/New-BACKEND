@@ -7,6 +7,7 @@ app = Flask(__name__)
 cameras = {}
 exit_signals = {}
 
+
 def start_cameras():
     """Detect and initialize all available cameras."""
     index = 0
@@ -19,11 +20,13 @@ def start_cameras():
         exit_signals[index] = threading.Event()
         index += 1
 
+
 def stop_cameras():
     """Release all cameras and set exit signals."""
     for index, cap in cameras.items():
         cap.release()
         exit_signals[index].set()
+
 
 def generate_frames(camera_index):
     """Yield frames from camera_feed_process, managed by main.py."""
@@ -38,16 +41,19 @@ def generate_frames(camera_index):
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
 
+
 @app.route('/video_feed/<int:camera_index>')
 def video_feed(camera_index):
     """Video feed route for each camera."""
     return Response(generate_frames(camera_index), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 @app.route('/')
 def index():
     """Render the main page with links to all camera feeds."""
     start_cameras()  # Start or detect cameras at this point
     return render_template('index.html', cameras=cameras.keys())
+
 
 if __name__ == "__main__":
     try:
@@ -120,7 +126,7 @@ if __name__ == "__main__":
 #             break
 #         yield frame
 #     cap.release()
-    
+
 # def generate_frames(camera_index):
 #     cap = cv2.VideoCapture(camera_index)
 #     while True:
@@ -146,8 +152,6 @@ if __name__ == "__main__":
 
 # if __name__ == '__main__':
 #     app.run(debug=True)
-
-
 
 
 # from flask import Flask, render_template, Response
