@@ -8,6 +8,8 @@ import json
 from django.utils.dateparse import parse_date
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.hashers import make_password
+from django.core.exceptions import ObjectDoesNotExist
+
 
 
 def location_list(request):
@@ -112,13 +114,14 @@ def add_user_to_community(request):
             person = Person.objects.get(pk=person_id)
             community = Community.objects.get(pk=community_id)
 
-            # Create a new UsersInCommunity object
-            user_in_community = UsersInCommunity(
-                person=person, Community_ID=community, join_date=join_date)
-            user_in_community.save()
-
-            # Return a success response
-            return JsonResponse({'message': 'User added to community successfully'})
+            if UsersInCommunity.objects.filter(person=person, Community_ID=community).exists():
+                return JsonResponse({'error': 'User already exists in the community'}, status=400)
+            else:
+                # Create a new UsersInCommunity object
+                user_in_community = UsersInCommunity(person=person, Community_ID=community, join_date=join_date)
+                user_in_community.save()
+                # Return a success response
+                return JsonResponse({'message': 'User added to community successfully'})
         except (Person.DoesNotExist, Community.DoesNotExist) as e:
             # Return an error response if person or community does not exist
             return JsonResponse({'error': 'Person or Community not found'}, status=404)
