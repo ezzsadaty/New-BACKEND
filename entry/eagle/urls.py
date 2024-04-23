@@ -19,7 +19,7 @@ urlpatterns = [
          name='users-in-community-list'),
     path('add-user-to-community/', add_user_to_community,
          name='add-user-to-community'),
-    path('remove_user_from_community/', remove_user_from_community, name='remove_user_from_community'),
+    path('remove-user-from-community/', remove_user_from_community, name='remove_user_from_community'),
 
     path('users-in-community/<int:community_id>/', users_in_community_by_id, name='users_in_community_by_id'),
     path('camera-history/', camera_history_list, name='camera-history-list'),
