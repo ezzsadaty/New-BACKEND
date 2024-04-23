@@ -85,9 +85,12 @@ def users_in_community_by_id(request, community_id):
     users_in_community = UsersInCommunity.objects.filter(Community_ID=community_id)
     
     # Serialize the user data into JSON format
-    data = [{'person': user.person.first_name, 
+    data = [{'user_first': user.person.first_name,
+             'photo_url': user.person.photo.url if user.person.photo else None, 
              'Community_ID': user.Community_ID.Community_ID,
-             'join_date': user.join_date} 
+             'join_date': user.join_date,
+             'user_last': user.person.last_name,
+             'user_id':user.person.pk} 
             for user in users_in_community]
     
     # Return the JSON response with the user data
