@@ -129,6 +129,38 @@ def add_user_to_community(request):
         # Return an error response for unsupported methods
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
+@csrf_exempt
+def remove_user_from_community(request):
+    if request.method == 'POST':
+        # Decode JSON data from request body
+        data = json.loads(request.body)
+
+        # Extract data for removing a user from the community
+        person_id = data.get('person_id')
+        community_id = data.get('community_id')
+
+        try:
+            # Get person and community objects
+            person = Person.objects.get(pk=person_id)
+            community = Community.objects.get(pk=community_id)
+
+            # Check if the user exists in the community
+            try:
+                user_in_community = UsersInCommunity.objects.get(person=person, Community_ID=community)
+            except ObjectDoesNotExist:
+                return JsonResponse({'error': 'User does not exist in the community'}, status=400)
+
+            # Remove the user from the community
+            user_in_community.delete()
+
+            # Return a success response
+            return JsonResponse({'message': 'User removed from community successfully'})
+        except (Person.DoesNotExist, Community.DoesNotExist) as e:
+            # Return an error response if person or community does not exist
+            return JsonResponse({'error': 'Person or Community not found'}, status=404)
+    else:
+        # Return an error response for unsupported methods
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 def camera_history_list(request):
     camera_history = Camera_History.objects.all()

@@ -4,7 +4,7 @@ from django.conf.urls.static import static
 from .views import (
     location_list, camera_list, person_list, community_list, users_in_community_list, person_detail, camera_history_list, security_personnel_list, admin_list,
     add_camera_history, add_security_personnel, add_admin, create_community,
-    add_user_to_community, add_person,users_in_community_by_id,
+    add_user_to_community, add_person,users_in_community_by_id,remove_user_from_community,
 )
 
 urlpatterns = [
@@ -19,6 +19,8 @@ urlpatterns = [
          name='users-in-community-list'),
     path('add-user-to-community/', add_user_to_community,
          name='add-user-to-community'),
+    path('remove_user_from_community/', remove_user_from_community, name='remove_user_from_community'),
+
     path('users-in-community/<int:community_id>/', users_in_community_by_id, name='users_in_community_by_id'),
     path('camera-history/', camera_history_list, name='camera-history-list'),
     path('security-personnels/', security_personnel_list,
