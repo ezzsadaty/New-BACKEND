@@ -80,6 +80,19 @@ def users_in_community_list(request):
     return JsonResponse(data, safe=False)
 
 
+def users_in_community_by_id(request, community_id):
+    # Query the database to retrieve users in the specified community
+    users_in_community = UsersInCommunity.objects.filter(Community_ID=community_id)
+    
+    # Serialize the user data into JSON format
+    data = [{'person': user.person.first_name, 
+             'Community_ID': user.Community_ID.Community_ID,
+             'join_date': user.join_date} 
+            for user in users_in_community]
+    
+    # Return the JSON response with the user data
+    return JsonResponse(data, safe=False)
+
 @csrf_exempt
 def add_user_to_community(request):
     if request.method == 'POST':
