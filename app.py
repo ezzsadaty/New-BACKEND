@@ -138,6 +138,7 @@ CORS(app)  # Enable CORS for all domains
 cameras = {}
 exit_signals = {}
 
+
 def start_cameras():
     """Initialize cameras and allocate resources."""
     index = 0
@@ -152,11 +153,13 @@ def start_cameras():
         cameras[index].start()
         index += 1
 
+
 def stop_cameras():
     """Release all cameras and set exit signals."""
     for index in cameras.keys():
         exit_signals[index].set()
         cameras[index].join()
+
 
 def generate_frames(camera_index):
     """Yield frames from camera_feed_process, managed by main.py."""
@@ -181,6 +184,7 @@ def video_feed(camera_index):
 def get_cameras():
     """API endpoint to list all active cameras."""
     return jsonify(list(cameras.keys()))
+
 
 if __name__ == "__main__":
     try:

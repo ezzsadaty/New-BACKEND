@@ -8,6 +8,8 @@ import json
 from django.utils.dateparse import parse_date
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.hashers import make_password
+from django.core.exceptions import ObjectDoesNotExist
+
 
 
 def location_list(request):
@@ -80,6 +82,22 @@ def users_in_community_list(request):
     return JsonResponse(data, safe=False)
 
 
+def users_in_community_by_id(request, community_id):
+    # Query the database to retrieve users in the specified community
+    users_in_community = UsersInCommunity.objects.filter(Community_ID=community_id)
+    
+    # Serialize the user data into JSON format
+    data = [{'user_first': user.person.first_name,
+             'photo_url': user.person.photo.url if user.person.photo else None, 
+             'Community_ID': user.Community_ID.Community_ID,
+             'join_date': user.join_date,
+             'user_last': user.person.last_name,
+             'user_id':user.person.pk} 
+            for user in users_in_community]
+    
+    # Return the JSON response with the user data
+    return JsonResponse(data, safe=False)
+
 @csrf_exempt
 def add_user_to_community(request):
     if request.method == 'POST':
@@ -96,13 +114,14 @@ def add_user_to_community(request):
             person = Person.objects.get(pk=person_id)
             community = Community.objects.get(pk=community_id)
 
-            # Create a new UsersInCommunity object
-            user_in_community = UsersInCommunity(
-                person=person, Community_ID=community, join_date=join_date)
-            user_in_community.save()
-
-            # Return a success response
-            return JsonResponse({'message': 'User added to community successfully'})
+            if UsersInCommunity.objects.filter(person=person, Community_ID=community).exists():
+                return JsonResponse({'error': 'User already exists in the community'}, status=400)
+            else:
+                # Create a new UsersInCommunity object
+                user_in_community = UsersInCommunity(person=person, Community_ID=community, join_date=join_date)
+                user_in_community.save()
+                # Return a success response
+                return JsonResponse({'message': 'User added to community successfully'})
         except (Person.DoesNotExist, Community.DoesNotExist) as e:
             # Return an error response if person or community does not exist
             return JsonResponse({'error': 'Person or Community not found'}, status=404)
@@ -110,6 +129,38 @@ def add_user_to_community(request):
         # Return an error response for unsupported methods
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
+@csrf_exempt
+def remove_user_from_community(request):
+    if request.method == 'POST':
+        # Decode JSON data from request body
+        data = json.loads(request.body)
+
+        # Extract data for removing a user from the community
+        person_id = data.get('person_id')
+        community_id = data.get('community_id')
+
+        try:
+            # Get person and community objects
+            person = Person.objects.get(pk=person_id)
+            community = Community.objects.get(pk=community_id)
+
+            # Check if the user exists in the community
+            try:
+                user_in_community = UsersInCommunity.objects.get(person=person, Community_ID=community)
+            except ObjectDoesNotExist:
+                return JsonResponse({'error': 'User does not exist in the community'}, status=400)
+
+            # Remove the user from the community
+            user_in_community.delete()
+
+            # Return a success response
+            return JsonResponse({'message': 'User removed from community successfully'})
+        except (Person.DoesNotExist, Community.DoesNotExist) as e:
+            # Return an error response if person or community does not exist
+            return JsonResponse({'error': 'Person or Community not found'}, status=404)
+    else:
+        # Return an error response for unsupported methods
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 def camera_history_list(request):
     camera_history = Camera_History.objects.all()
