@@ -1,4 +1,3 @@
-from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from .models import Location, Camera, Person, Community, UsersInCommunity, Camera_History, SecurityPersonnel, Admin
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -6,9 +5,9 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Camera_History, Person, Camera
 import json
 from django.utils.dateparse import parse_date
-from django.contrib.auth import authenticate, login
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.auth.hashers import check_password
 
 
 
@@ -250,6 +249,8 @@ def add_admin(request):
             data = json.loads(request.body)
             first_name = data['first_name']
             last_name = data['last_name']
+            username = data['username']
+            password = data['password']
             birth_date = parse_date(data['birth_date'])
             created_at = parse_date(data['created_at'])
 
@@ -257,8 +258,11 @@ def add_admin(request):
                 first_name=first_name,
                 last_name=last_name,
                 birth_date=birth_date,
-                created_at=created_at
+                created_at=created_at,
+                username=username
+
             )
+            admin.set_password(password)  # Set the hashed password
             admin.save()
 
             return JsonResponse({'success': True, 'message': 'Admin added successfully.'})
@@ -303,7 +307,7 @@ def add_person(request):
 
 
 @csrf_exempt
-def login_user(request):
+def login_person(request):
     if request.method == 'POST':
         # Decode JSON data from request body
         data = json.loads(request.body)
@@ -312,15 +316,37 @@ def login_user(request):
         username = data.get('username')
         password = data.get('password')
 
-        # Authenticate user
-        user = authenticate(request, username=username, password=password)
+        try:
+            # Retrieve the person based on the username
+            person = Person.objects.get(username=username)
+        except Person.DoesNotExist:
+            return JsonResponse({'error': 'Invalid username or password'}, status=400)
 
-        if user is not None:
-            # Login user
-            login(request, user)
+        # Check if the provided password matches the hashed password in the database
+        if check_password(password, person.password):
+            # Manually create session to log in person
+            request.session['person_id'] = person.id
             return JsonResponse({'message': 'Login successful'})
         else:
             return JsonResponse({'error': 'Invalid username or password'}, status=400)
     else:
         # Return an error response for unsupported methods
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def login_admin(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        try:
+            admin = Admin.objects.get(username=username)
+            if admin.check_password(password):
+                # Authentication successful
+                # Perform login logic here
+                return JsonResponse({'message': 'Login successful'})
+            else:
+                return JsonResponse({'error': 'Invalid username or password'}, status=400)
+        except Admin.DoesNotExist:
+            return JsonResponse({'error': 'Admin not found'}, status=404)
+    else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
