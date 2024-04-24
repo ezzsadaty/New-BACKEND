@@ -10,7 +10,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.hashers import check_password
 
 
-
 def location_list(request):
     locations = Location.objects.all()
     data = [{'name': location.name} for location in locations]
@@ -83,19 +82,21 @@ def users_in_community_list(request):
 
 def users_in_community_by_id(request, community_id):
     # Query the database to retrieve users in the specified community
-    users_in_community = UsersInCommunity.objects.filter(Community_ID=community_id)
-    
+    users_in_community = UsersInCommunity.objects.filter(
+        Community_ID=community_id)
+
     # Serialize the user data into JSON format
     data = [{'user_first': user.person.first_name,
-             'photo_url': user.person.photo.url if user.person.photo else None, 
+             'photo_url': user.person.photo.url if user.person.photo else None,
              'Community_ID': user.Community_ID.Community_ID,
              'join_date': user.join_date,
              'user_last': user.person.last_name,
-             'user_id':user.person.pk} 
+             'user_id': user.person.pk}
             for user in users_in_community]
-    
+
     # Return the JSON response with the user data
     return JsonResponse(data, safe=False)
+
 
 @csrf_exempt
 def add_user_to_community(request):
@@ -117,7 +118,8 @@ def add_user_to_community(request):
                 return JsonResponse({'error': 'User already exists in the community'}, status=400)
             else:
                 # Create a new UsersInCommunity object
-                user_in_community = UsersInCommunity(person=person, Community_ID=community, join_date=join_date)
+                user_in_community = UsersInCommunity(
+                    person=person, Community_ID=community, join_date=join_date)
                 user_in_community.save()
                 # Return a success response
                 return JsonResponse({'message': 'User added to community successfully'})
@@ -127,6 +129,7 @@ def add_user_to_community(request):
     else:
         # Return an error response for unsupported methods
         return JsonResponse({'error': 'Method not allowed'}, status=405)
+
 
 @csrf_exempt
 def remove_user_from_community(request):
@@ -145,7 +148,8 @@ def remove_user_from_community(request):
 
             # Check if the user exists in the community
             try:
-                user_in_community = UsersInCommunity.objects.get(person=person, Community_ID=community)
+                user_in_community = UsersInCommunity.objects.get(
+                    person=person, Community_ID=community)
             except ObjectDoesNotExist:
                 return JsonResponse({'error': 'User does not exist in the community'}, status=400)
 
@@ -160,6 +164,7 @@ def remove_user_from_community(request):
     else:
         # Return an error response for unsupported methods
         return JsonResponse({'error': 'Method not allowed'}, status=405)
+
 
 def camera_history_list(request):
     camera_history = Camera_History.objects.all()
@@ -333,20 +338,50 @@ def login_person(request):
         # Return an error response for unsupported methods
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
+
+@csrf_exempt
 def login_admin(request):
+    # if request.method == 'POST':
+    #     # username = request.POST.get('username')
+    #     # password = request.POST.get('password')
+    #     data = json.loads(request.body)
+
+    #     # Extract username and password
+    #     username = data.get('username')
+    #     password = data.get('password')
+    #     try:
+    #         admin = Admin.objects.get(username=username)
+    #         if admin.check_password(password):
+    #             # Authentication successful
+    #             # Perform login logic here
+    #             return JsonResponse({'message': 'Login successful'})
+    #         else:
+    #             return JsonResponse({'error': 'Invalid username or password'}, status=400)
+    #     except Admin.DoesNotExist:
+    #         return JsonResponse({'error': 'Admin not found'}, status=404)
+    # else:
+    #     return JsonResponse({'error': 'Method not allowed'}, status=405)
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        # Decode JSON data from request body
+        data = json.loads(request.body)
+
+        # Extract username and password
+        username = data.get('username')
+        password = data.get('password')
 
         try:
+            # Retrieve the person based on the username
             admin = Admin.objects.get(username=username)
-            if admin.check_password(password):
-                # Authentication successful
-                # Perform login logic here
-                return JsonResponse({'message': 'Login successful'})
-            else:
-                return JsonResponse({'error': 'Invalid username or password'}, status=400)
         except Admin.DoesNotExist:
-            return JsonResponse({'error': 'Admin not found'}, status=404)
+            return JsonResponse({'error': 'Invalid username'}, status=400)
+
+        # Check if the provided password matches the hashed password in the database
+        if check_password(password, admin.password):
+            # Manually create session to log in person
+            request.session['admin_id'] = admin.id
+            return JsonResponse({'message': 'Login successful'})
+        else:
+            return JsonResponse({'error': 'Invalid username or password'}, status=400)
     else:
+        # Return an error response for unsupported methods
         return JsonResponse({'error': 'Method not allowed'}, status=405)
