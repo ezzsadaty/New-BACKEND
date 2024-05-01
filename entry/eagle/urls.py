@@ -5,7 +5,8 @@ from .views import (
     location_list, camera_list, person_list, community_list, users_in_community_list, person_detail,
     camera_history_list, security_personnel_list, admin_list, login_person, login_admin,
     add_camera_history, add_security_personnel, add_admin, create_community,
-    add_user_to_community, add_person, users_in_community_by_id, remove_user_from_community, edit_person_detail
+    add_user_to_community, add_person, users_in_community_by_id, remove_user_from_community, edit_person_detail,
+    get_counts
 )
 
 urlpatterns = [
@@ -25,6 +26,7 @@ urlpatterns = [
     path('remove-user-from-community/', remove_user_from_community,
          name='remove_user_from_community'),
     path('person/<int:pk>/edit/', edit_person_detail, name='edit_person_detail'),
+    path('get_counts/', get_counts, name='get_counts'),
 
     path('users-in-community/<int:community_id>/',
          users_in_community_by_id, name='users_in_community_by_id'),

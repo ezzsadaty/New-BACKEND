@@ -432,3 +432,15 @@ def login_admin(request):
     else:
         # Return an error response for unsupported methods
         return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+def get_counts(request):
+    person_count = Person.objects.count()
+    community_count = Community.objects.count()
+    
+    data = {
+        'person_count': person_count,
+        'community_count': community_count
+    }
+    
+    return JsonResponse(data)
