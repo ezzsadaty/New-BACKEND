@@ -200,11 +200,11 @@ def add_camera_history(request):
             camera_id = data.get('camera_id')
             print(data)
             print(checkIn_time)
-            Cid = camera_id+1
+            Cid = camera_id+3
 
             # Validate and fetch related instances
             person = Person.objects.filter(
-                id=person_id, first_name=person_name).first()
+                id=person_id).first()
             camera = Camera.objects.filter(id=Cid).first()
 
             if not person or not camera:
