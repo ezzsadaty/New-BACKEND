@@ -1,4 +1,5 @@
 
+from django.conf import settings
 import os
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
@@ -106,3 +107,12 @@ class Admin(models.Model):
 
     # def check_password(self, raw_password):
     #     return check_password(raw_password, self.password)
+
+
+class AdminLoginHistory(models.Model):
+    admin = models.ForeignKey(Admin,
+                              on_delete=models.CASCADE)
+    login_time = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-login_time']

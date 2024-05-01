@@ -1,6 +1,7 @@
+from django.utils import timezone
 from django.http import QueryDict
 from django.http import JsonResponse
-from .models import Location, Camera, Person, Community, UsersInCommunity, Camera_History, SecurityPersonnel, Admin
+from .models import Location, Camera, Person, Community, UsersInCommunity, Camera_History, SecurityPersonnel, Admin, AdminLoginHistory
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotAllowed
 from django.views.decorators.csrf import csrf_exempt
 from .models import Camera_History, Person, Camera
@@ -10,6 +11,7 @@ from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.hashers import check_password
 from django.core.files.base import ContentFile
+from datetime import datetime
 
 
 def location_list(request):
@@ -50,9 +52,15 @@ def person_detail(request, pk):
         return JsonResponse({'error': 'Person not found'}, status=404)
 
 
+# def community_list(request):
+#     communities = Community.objects.all()
+#     data = [{'name': community.name, 'Community_ID': community.Community_ID}
+#             for community in communities]
+#     return JsonResponse(data, safe=False)
+
 def community_list(request):
     communities = Community.objects.all()
-    data = [{'name': community.name, 'Community_ID': community.Community_ID}
+    data = [{'Community_ID': community.Community_ID}
             for community in communities]
     return JsonResponse(data, safe=False)
 
@@ -60,18 +68,11 @@ def community_list(request):
 @csrf_exempt
 def create_community(request):
     if request.method == 'POST':
-        # Decode JSON data from request body
         data = json.loads(request.body)
-        # Extract data for creating a new community
-        name = data.get('name')
-        community_id = data.get('community_id')
-        # Create a new community object
-        community = Community(name=name, Community_ID=community_id)
-        community.save()
-        # Return a success response
-        return JsonResponse({'message': 'Community created successfully'})
+        # Assuming no data is needed to create a community
+        community = Community.objects.create()
+        return JsonResponse({'message': 'Community created successfully', 'Community_ID': community.Community_ID})
     else:
-        # Return an error response for unsupported methods
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 
@@ -426,7 +427,14 @@ def login_admin(request):
         if check_password(password, admin.password):
             # Manually create session to log in person
             request.session['admin_id'] = admin.id
-            return JsonResponse({'message': 'Login successful'})
+            login_history = AdminLoginHistory(
+                admin=admin, login_time=datetime.now())
+            login_history.save()
+            data = {
+                "admin_name": admin.first_name,
+                "Admin_id": admin.id,
+            }
+            return JsonResponse({'message': 'Login successful', "data": data})
         else:
             return JsonResponse({'error': 'Invalid username or password'}, status=400)
     else:
@@ -437,10 +445,29 @@ def login_admin(request):
 def get_counts(request):
     person_count = Person.objects.count()
     community_count = Community.objects.count()
-    
+
     data = {
         'person_count': person_count,
         'community_count': community_count
     }
-    
+
     return JsonResponse(data)
+
+
+@csrf_exempt
+def admin_login_history(request, admin_id):
+    if request.method == 'GET':
+        try:
+            # Get the admin login history
+            history = AdminLoginHistory.objects.filter(
+                admin=admin_id).order_by('-login_time')
+            # Serialize the data
+            history_data = [{'login_time': login.login_time}
+                            for login in history]
+
+            # Return the JSON response
+            return JsonResponse({'history': history_data})
+        except:
+            return JsonResponse({'error': "error"})
+    else:
+        return JsonResponse({'error': 'Method not allowed'}, status=405)

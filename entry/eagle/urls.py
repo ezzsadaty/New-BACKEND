@@ -6,7 +6,7 @@ from .views import (
     camera_history_list, security_personnel_list, admin_list, login_person, login_admin,
     add_camera_history, add_security_personnel, add_admin, create_community,
     add_user_to_community, add_person, users_in_community_by_id, remove_user_from_community, edit_person_detail,
-    get_counts
+    get_counts, admin_login_history
 )
 
 urlpatterns = [
@@ -34,6 +34,9 @@ urlpatterns = [
     path('security-personnels/', security_personnel_list,
          name='security-personnel-list'),
     path('admins/', admin_list, name='admin-list'),
+    path('admins/login/history/<int:admin_id>/',
+         admin_login_history, name='admin_login_history'),
+
     path('camera-history/add/', add_camera_history, name='add_camera_history'),
     path('security-personnel/add/', add_security_personnel,
          name='add_security_personnel'),
