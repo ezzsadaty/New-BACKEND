@@ -59,9 +59,8 @@ class Person(models.Model):
 
 
 class Community(models.Model):
-    name = models.CharField(max_length=255)
     users = models.ManyToManyField(Person, through='UsersInCommunity')
-    Community_ID = models.IntegerField(primary_key=True)
+    Community_ID = models.AutoField(primary_key=True)
 
 
 class UsersInCommunity(models.Model):
