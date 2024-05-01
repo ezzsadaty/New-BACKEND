@@ -220,17 +220,20 @@ def camera_history_list(request):
              'checkIn_time': history.checkIn_time, 'checkOut_time': history.checkOut_time} for history in camera_history]
     return JsonResponse(data, safe=False)
 
+
 def camera_history_for_person(request, person_id):
     try:
         camera_history = Camera_History.objects.filter(person__id=person_id)
         data = [{'person': history.person.first_name,
+                 'person_id': history.id,
                  'camera': history.camera.name,
                  'checkIn_time': history.checkIn_time,
                  'checkOut_time': history.checkOut_time} for history in camera_history]
         return JsonResponse(data, safe=False)
     except Camera_History.DoesNotExist:
         return JsonResponse({'error': 'Camera history not found for the specified person'}, status=404)
-    
+
+
 def security_personnel_list(request):
     security_personnels = SecurityPersonnel.objects.all()
     data = [{'first_name': personnel.first_name, 'last_name': personnel.last_name,
