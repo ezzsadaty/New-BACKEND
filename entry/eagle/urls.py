@@ -3,14 +3,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from .views import (
     location_list, camera_list, person_list, community_list, users_in_community_list, person_detail,
-    camera_history_list, security_personnel_list, admin_list,login_person,login_admin,
+    camera_history_list, security_personnel_list, admin_list, login_person, login_admin,
     add_camera_history, add_security_personnel, add_admin, create_community,
-    add_user_to_community, add_person,users_in_community_by_id,remove_user_from_community,
+    add_user_to_community, add_person, users_in_community_by_id, remove_user_from_community, edit_person_detail
 )
 
 urlpatterns = [
-     path('Login/User/', login_person, name='Login-user'),
-     path('Login/Admin/', login_admin, name='Login-Admin'),
+    path('Login/User/', login_person, name='Login-user'),
+    path('Login/Admin/', login_admin, name='Login-Admin'),
     path('locations/', location_list, name='location-list'),
     path('cameras/', camera_list, name='camera-list'),
     path('persons/', person_list, name='person-list'),
@@ -22,9 +22,12 @@ urlpatterns = [
          name='users-in-community-list'),
     path('add-user-to-community/', add_user_to_community,
          name='add-user-to-community'),
-    path('remove-user-from-community/', remove_user_from_community, name='remove_user_from_community'),
+    path('remove-user-from-community/', remove_user_from_community,
+         name='remove_user_from_community'),
+    path('person/<int:pk>/edit/', edit_person_detail, name='edit_person_detail'),
 
-    path('users-in-community/<int:community_id>/', users_in_community_by_id, name='users_in_community_by_id'),
+    path('users-in-community/<int:community_id>/',
+         users_in_community_by_id, name='users_in_community_by_id'),
     path('camera-history/', camera_history_list, name='camera-history-list'),
     path('security-personnels/', security_personnel_list,
          name='security-personnel-list'),

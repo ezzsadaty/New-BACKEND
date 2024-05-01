@@ -1,6 +1,7 @@
+from django.http import QueryDict
 from django.http import JsonResponse
 from .models import Location, Camera, Person, Community, UsersInCommunity, Camera_History, SecurityPersonnel, Admin
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotAllowed
 from django.views.decorators.csrf import csrf_exempt
 from .models import Camera_History, Person, Camera
 import json
@@ -8,6 +9,7 @@ from django.utils.dateparse import parse_date
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.hashers import check_password
+from django.core.files.base import ContentFile
 
 
 def location_list(request):
@@ -126,6 +128,51 @@ def add_user_to_community(request):
         except (Person.DoesNotExist, Community.DoesNotExist) as e:
             # Return an error response if person or community does not exist
             return JsonResponse({'error': 'Person or Community not found'}, status=404)
+    else:
+        # Return an error response for unsupported methods
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@csrf_exempt
+def edit_person_detail(request, pk):
+    if request.method == 'PUT':
+        try:
+            # Get the person object
+            person = Person.objects.get(pk=pk)
+
+            # Decode JSON data from request body
+            data = json.loads(request.body)
+
+            # Update person details if provided in the request
+            if 'first_name' in data:
+                person.first_name = data['first_name']
+            if 'last_name' in data:
+                person.last_name = data['last_name']
+            if 'birth_date' in data:
+                person.birth_date = data['birth_date']
+            if 'email' in data:
+                person.email = data['email']
+            if 'photo' in data:
+                # Assuming you handle photo upload separately
+                # Update photo URL if provided
+                person.photo = data['photo']
+
+            # Save the updated person object
+            person.save()
+
+            # Return the updated person details
+            updated_data = {
+                'id': person.pk,
+                'first_name': person.first_name,
+                'last_name': person.last_name,
+                'birth_date': person.birth_date,
+                'created_at': person.created_at,
+                'email': person.email,
+                'photo': person.photo.url if person.photo else None
+            }
+            return JsonResponse(updated_data)
+        except Person.DoesNotExist:
+            return JsonResponse({'error': 'Person not found'}, status=404)
     else:
         # Return an error response for unsupported methods
         return JsonResponse({'error': 'Method not allowed'}, status=405)
