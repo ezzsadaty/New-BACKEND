@@ -1,3 +1,5 @@
+from django.http import HttpResponse
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
 from django.http import QueryDict
 from django.http import JsonResponse
@@ -38,6 +40,10 @@ def person_list(request):
 def person_detail(request, pk):
     try:
         person = Person.objects.get(pk=pk)
+        users_in_community = UsersInCommunity.objects.filter(
+            person_id=pk).first()
+        community_id = users_in_community.Community_ID.Community_ID if users_in_community else None
+
         data = {
             'id': person.pk,
             'first_name': person.first_name,
@@ -45,7 +51,8 @@ def person_detail(request, pk):
             'birth_date': person.birth_date,
             'created_at': person.created_at,
             'email': person.email,
-            'photo_url': person.photo.url if person.photo else None
+            'photo_url': person.photo.url if person.photo else None,
+            'Community_ID': community_id  # Retrieved community ID based on person ID
         }
         return JsonResponse(data)
     except Person.DoesNotExist:
@@ -72,6 +79,23 @@ def create_community(request):
         # Assuming no data is needed to create a community
         community = Community.objects.create()
         return JsonResponse({'message': 'Community created successfully', 'Community_ID': community.Community_ID})
+    else:
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@csrf_exempt
+def check_community_id(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        community_id = data.get('community_id', None)
+        if community_id is not None:
+            try:
+                community = Community.objects.get(Community_ID=community_id)
+                return JsonResponse({'message': 'Community exists', 'Community_ID': community.Community_ID})
+            except Community.DoesNotExist:
+                return JsonResponse({'error': 'Community does not exist'}, status=404)
+        else:
+            return JsonResponse({'error': 'Invalid data provided'}, status=400)
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -216,7 +240,7 @@ def remove_user_from_community(request):
 
 def camera_history_list(request):
     camera_history = Camera_History.objects.all()
-    data = [{'person': history.person.first_name, 'camera': history.camera.name,
+    data = [{'person': history.person.first_name, "person_id": history.person.pk, 'camera': history.camera.name,
              'checkIn_time': history.checkIn_time, 'checkOut_time': history.checkOut_time} for history in camera_history]
     return JsonResponse(data, safe=False)
 
@@ -372,6 +396,40 @@ def add_person(request):
     return JsonResponse({'error': 'This method is not allowed'}, status=405)
 
 
+# def login_person(request):
+#     if request.method == 'POST':
+#         # Decode JSON data from request body
+#         data = json.loads(request.body)
+
+#         # Extract username and password
+#         username = data.get('username')
+#         password = data.get('password')
+
+#         try:
+#             # Retrieve the person based on the username
+#             person = Person.objects.get(username=username)
+#         except Person.DoesNotExist:
+#             return JsonResponse({'error': 'Invalid username or password'}, status=400)
+
+#         # Check if the provided password matches the hashed password in the database
+#         # if check_password(password, person.password):
+#         #     # Manually create session to log in person
+#         #     return JsonResponse({'message': 'Login successful'})
+#         if check_password(password, person.password):
+#             # Generate JWT token
+#             refresh = RefreshToken.for_user(person)
+#             request.session['person_id'] = person.id
+#             token = {
+#                 'refresh': str(refresh),
+#                 'access': str(refresh.access_token),
+#             }
+#             return JsonResponse({'message': 'Login successful', 'token': token})
+#         else:
+#             return JsonResponse({'error': 'Invalid username or password'}, status=400)
+#     else:
+#         # Return an error response for unsupported methods
+#         return JsonResponse({'error': 'Method not allowed'}, status=405)
+
 @csrf_exempt
 def login_person(request):
     if request.method == 'POST':
@@ -390,9 +448,17 @@ def login_person(request):
 
         # Check if the provided password matches the hashed password in the database
         if check_password(password, person.password):
-            # Manually create session to log in person
-            request.session['person_id'] = person.id
-            return JsonResponse({'message': 'Login successful'})
+            # Generate JWT token
+            refresh = RefreshToken.for_user(person)
+            token = {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+
+            # Set the token in an HTTP cookie
+            response = JsonResponse({'message': 'Login successful'})
+            response.set_cookie('auth_token', token['access'], httponly=True)
+            return response
         else:
             return JsonResponse({'error': 'Invalid username or password'}, status=400)
     else:

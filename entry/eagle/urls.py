@@ -6,7 +6,7 @@ from .views import (
     camera_history_list, security_personnel_list, admin_list, login_person, login_admin,
     add_camera_history, add_security_personnel, add_admin, create_community,
     add_user_to_community, add_person, users_in_community_by_id, remove_user_from_community, edit_person_detail,
-    get_counts, admin_login_history,camera_history_for_person
+    get_counts, admin_login_history, camera_history_for_person, check_community_id
 )
 
 urlpatterns = [
@@ -19,6 +19,7 @@ urlpatterns = [
     path('persons/<int:pk>/', person_detail, name='person-detail'),
     path('communities/', community_list, name='community-list'),
     path('communities/create/', create_community, name='create-community'),
+    path('communities/check/', check_community_id, name='create-community'),
     path('users-in-community/', users_in_community_list,
          name='users-in-community-list'),
     path('add-user-to-community/', add_user_to_community,
@@ -31,7 +32,8 @@ urlpatterns = [
     path('users-in-community/<int:community_id>/',
          users_in_community_by_id, name='users_in_community_by_id'),
     path('camera-history/', camera_history_list, name='camera-history-list'),
-     path('camera-history/<int:person_id>/', camera_history_for_person, name='camera_history_for_person'),
+    path('camera-history/<int:person_id>/',
+         camera_history_for_person, name='camera_history_for_person'),
     path('security-personnels/', security_personnel_list,
          name='security-personnel-list'),
     path('admins/', admin_list, name='admin-list'),
