@@ -6,7 +6,7 @@ from .views import (
     camera_history_list, security_personnel_list, admin_list, login_person, login_admin,
     add_camera_history, add_security_personnel, add_admin, create_community,
     add_user_to_community, add_person, users_in_community_by_id, remove_user_from_community, edit_person_detail,
-    get_counts, admin_login_history, camera_history_for_person, check_community_id
+    get_counts, admin_login_history, camera_history_for_person, check_community_id, admin_image_view, person_image_view
 )
 
 urlpatterns = [
@@ -17,6 +17,7 @@ urlpatterns = [
     path('persons/', person_list, name='person-list'),
     path('Signup/', add_person, name='add-person'),
     path('persons/<int:pk>/', person_detail, name='person-detail'),
+    path('person/<int:pk>/image/', person_image_view, name='person_image'),
     path('communities/', community_list, name='community-list'),
     path('communities/create/', create_community, name='create-community'),
     path('communities/check/', check_community_id, name='create-community'),
@@ -44,4 +45,5 @@ urlpatterns = [
     path('security-personnel/add/', add_security_personnel,
          name='add_security_personnel'),
     path('admin/add/', add_admin, name='add_admin'),
+    path('admin-image/<int:admin_id>/', admin_image_view, name='admin-image'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

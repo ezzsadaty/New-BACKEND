@@ -1,3 +1,6 @@
+from .models import Person
+from .models import Admin
+from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
@@ -59,11 +62,22 @@ def person_detail(request, pk):
         return JsonResponse({'error': 'Person not found'}, status=404)
 
 
+def person_image_view(request, pk):
+    person = get_object_or_404(Person, pk=pk)
+    if person.photo:
+        with open(person.photo.path, 'rb') as f:
+            image_data = f.read()
+        # Adjust content type based on your image format
+        return HttpResponse(image_data, content_type="image/jpeg")
+    else:
+        return HttpResponse(status=404)
+
 # def community_list(request):
 #     communities = Community.objects.all()
 #     data = [{'name': community.name, 'Community_ID': community.Community_ID}
 #             for community in communities]
 #     return JsonResponse(data, safe=False)
+
 
 def community_list(request):
     communities = Community.objects.all()
@@ -272,6 +286,16 @@ def admin_list(request):
     return JsonResponse(data, safe=False)
 
 
+def admin_image_view(request, admin_id):
+    admin = get_object_or_404(Admin, pk=admin_id)
+    if admin.image:
+        image_data = open(admin.image.path, "rb").read()
+        # Adjust content type based on your image format
+        return HttpResponse(image_data, content_type="image/jpeg")
+    else:
+        return HttpResponse(status=404)  # Return 404 if the admin has no image
+
+
 @csrf_exempt  # Note: Be cautious with CSRF exemption in production
 def add_camera_history(request):
     if request.method == 'POST':
@@ -454,9 +478,12 @@ def login_person(request):
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
             }
-
+            data = {
+                "user_id": person.pk,
+            }
             # Set the token in an HTTP cookie
-            response = JsonResponse({'message': 'Login successful'})
+            response = JsonResponse(
+                {'message': 'Login successful', "data": data})
             response.set_cookie('auth_token', token['access'], httponly=True)
             return response
         else:

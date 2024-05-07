@@ -93,6 +93,7 @@ class Admin(models.Model):
     # Add username and password fields
     username = models.CharField(max_length=150, unique=True)
     password = models.CharField(max_length=128)
+    image = models.ImageField(upload_to='admin_images/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
