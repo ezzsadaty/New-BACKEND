@@ -1,3 +1,4 @@
+from .models import Camera_History
 from .models import Person
 from .models import Admin
 from django.shortcuts import get_object_or_404
@@ -38,6 +39,20 @@ def person_list(request):
             'birth_date': person.birth_date, 'created_at': person.created_at,
              'photo_url': person.photo.url if person.photo else None} for person in persons]
     return JsonResponse(data, safe=False)
+
+
+@csrf_exempt
+def delete_person(request, pk):
+    if request.method == 'DELETE':
+        try:
+            person = Person.objects.get(pk=pk)
+            person.delete()
+            return JsonResponse({'message': 'Person deleted successfully'})
+        except Person.DoesNotExist:
+            return JsonResponse({'error': 'Person not found'}, status=404)
+    else:
+        # Method not allowed
+        return HttpResponseNotAllowed(['DELETE'])
 
 
 def person_detail(request, pk):
@@ -87,6 +102,28 @@ def community_list(request):
 
 
 @csrf_exempt
+def delete_community_admin(request):
+    if request.method == 'DELETE':
+        try:
+            data = json.loads(request.body)
+            community_id = data.get('community_id')
+            if community_id is None:
+                return JsonResponse({'error': 'Community ID is required'}, status=400)
+
+            # Get the community by its ID
+            community = Community.objects.get(Community_ID=community_id)
+
+            # Delete the community
+            community.delete()
+
+            return JsonResponse({'message': 'Community deleted successfully'})
+        except Community.DoesNotExist:
+            return JsonResponse({'error': 'Community not found'}, status=404)
+    else:
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@csrf_exempt
 def create_community(request):
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -110,6 +147,30 @@ def check_community_id(request):
                 return JsonResponse({'error': 'Community does not exist'}, status=404)
         else:
             return JsonResponse({'error': 'Invalid data provided'}, status=400)
+    else:
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@csrf_exempt
+def delete_community(request, community_id):
+    if request.method == 'POST':
+        try:
+            # Extract person_id from the request data
+
+            data = json.loads(request.body)
+            person_id = data.get('person_id')
+
+            # Filter UsersInCommunity object based on both community_id and person_id
+            user_in_community = UsersInCommunity.objects.get(
+                Community_ID=community_id, person_id=person_id)
+            # Delete the filtered instance
+            user_in_community.delete()
+
+            return JsonResponse({'message': 'User removed from community successfully'}, status=200)
+        except UsersInCommunity.DoesNotExist:
+            return JsonResponse({'error': 'No such user in community'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -257,6 +318,20 @@ def camera_history_list(request):
     data = [{'person': history.person.first_name, "person_id": history.person.pk, 'camera': history.camera.name,
              'checkIn_time': history.checkIn_time, 'checkOut_time': history.checkOut_time} for history in camera_history]
     return JsonResponse(data, safe=False)
+
+
+# class CameraHistoryConsumer(WebsocketConsumer):
+#     def connect(self):
+#         self.accept()
+
+#     def disconnect(self, close_code):
+#         pass
+
+#     def fetch_camera_history(self, event):
+#         camera_history = Camera_History.objects.all()
+#         data = [{'person': history.person.first_name, 'camera': history.camera.name,
+#                  'checkIn_time': history.checkIn_time, 'checkOut_time': history.checkOut_time} for history in camera_history]
+#         self.send(text_data=json.dumps(data))
 
 
 def camera_history_for_person(request, person_id):

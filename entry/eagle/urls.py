@@ -6,7 +6,7 @@ from .views import (
     camera_history_list, security_personnel_list, admin_list, login_person, login_admin,
     add_camera_history, add_security_personnel, add_admin, create_community,
     add_user_to_community, add_person, users_in_community_by_id, remove_user_from_community, edit_person_detail,
-    get_counts, admin_login_history, camera_history_for_person, check_community_id, admin_image_view, person_image_view
+    get_counts, admin_login_history, camera_history_for_person, check_community_id, admin_image_view, person_image_view, delete_community, delete_person, delete_community_admin
 )
 
 urlpatterns = [
@@ -21,6 +21,11 @@ urlpatterns = [
     path('communities/', community_list, name='community-list'),
     path('communities/create/', create_community, name='create-community'),
     path('communities/check/', check_community_id, name='create-community'),
+    path('community/delete/<int:community_id>/',
+         delete_community, name='community-delete'),
+    path('delete-community/', delete_community_admin, name='delete_community'),
+
+
     path('users-in-community/', users_in_community_list,
          name='users-in-community-list'),
     path('add-user-to-community/', add_user_to_community,
@@ -28,6 +33,8 @@ urlpatterns = [
     path('remove-user-from-community/', remove_user_from_community,
          name='remove_user_from_community'),
     path('person/<int:pk>/edit/', edit_person_detail, name='edit_person_detail'),
+    path('person/<int:pk>/', delete_person, name='delete_person'),
+
     path('get_counts/', get_counts, name='get_counts'),
 
     path('users-in-community/<int:community_id>/',
