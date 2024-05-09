@@ -387,6 +387,53 @@ def admin_details(request, admin_id):
     return JsonResponse(data)
 
 
+@csrf_exempt
+def edit_admin_detail(request, pk):
+    if request.method == 'PUT':
+        try:
+            # Get the admin object
+            admin = Admin.objects.get(pk=pk)
+
+            # Decode JSON data from request body
+            data = json.loads(request.body)
+
+            # Update admin details if provided in the request
+            if 'first_name' in data:
+                admin.first_name = data['first_name']
+            if 'last_name' in data:
+                admin.last_name = data['last_name']
+            if 'birth_date' in data:
+                admin.birth_date = data['birth_date']
+            if 'username' in data:
+                admin.username = data['username']
+            if 'password' in data:
+                admin.password = data['password']
+            if 'image' in data:
+                # Assuming you handle image upload separately
+                # Update image URL if provided
+                admin.image = data['image']
+
+            # Save the updated admin object
+            admin.save()
+
+            # Return the updated admin details
+            updated_data = {
+                'id': admin.pk,
+                'first_name': admin.first_name,
+                'last_name': admin.last_name,
+                'birth_date': admin.birth_date,
+                'created_at': admin.created_at,
+                'username': admin.username,
+                'image': admin.image.url if admin.image else None
+            }
+            return JsonResponse(updated_data)
+        except Admin.DoesNotExist:
+            return JsonResponse({'error': 'Admin not found'}, status=404)
+    else:
+        # Return an error response for unsupported methods
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
 def admin_image_view(request, admin_id):
     admin = get_object_or_404(Admin, pk=admin_id)
     if admin.image:
