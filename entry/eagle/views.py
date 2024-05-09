@@ -182,6 +182,18 @@ def users_in_community_list(request):
     return JsonResponse(data, safe=False)
 
 
+def user_communities_No(request, user_id):
+    try:
+        user_communities = UsersInCommunity.objects.filter(person_id=user_id)
+        data = [{
+            'Community_ID': user_in_community.Community_ID.Community_ID,
+            'Join_Date': user_in_community.join_date
+        } for user_in_community in user_communities]
+        return JsonResponse(data, safe=False)
+    except UsersInCommunity.DoesNotExist:
+        return JsonResponse({'error': 'User not found or not associated with any communities'}, status=404)
+
+
 def users_in_community_by_id(request, community_id):
     # Query the database to retrieve users in the specified community
     users_in_community = UsersInCommunity.objects.filter(
@@ -359,6 +371,20 @@ def admin_list(request):
     data = [{'first_name': admin.first_name, 'last_name': admin.last_name,
              'created_at': admin.created_at, 'birth_date': admin.birth_date} for admin in admins]
     return JsonResponse(data, safe=False)
+
+
+def admin_details(request, admin_id):
+    admin = get_object_or_404(Admin, id=admin_id)
+    data = {
+        'id': admin.id,
+        'first_name': admin.first_name,
+        'last_name': admin.last_name,
+        'created_at': admin.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        'birth_date': admin.birth_date.strftime('%Y-%m-%d'),
+        'username': admin.username,
+        'image_url': admin.image.url if admin.image else None
+    }
+    return JsonResponse(data)
 
 
 def admin_image_view(request, admin_id):
