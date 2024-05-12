@@ -1,3 +1,4 @@
+from .models import ContactMessage
 from .models import Camera_History
 from .models import Person
 from .models import Admin
@@ -55,12 +56,33 @@ def delete_person(request, pk):
         return HttpResponseNotAllowed(['DELETE'])
 
 
+# def person_detail(request, pk):
+#     try:
+#         person = Person.objects.get(pk=pk)
+#         users_in_community = UsersInCommunity.objects.filter(
+#             person_id=pk).first()
+#         community_id = users_in_community.Community_ID.Community_ID if users_in_community else None
+
+#         data = {
+#             'id': person.pk,
+#             'first_name': person.first_name,
+#             'last_name': person.last_name,
+#             'birth_date': person.birth_date,
+#             'created_at': person.created_at,
+#             'email': person.email,
+#             'photo_url': person.photo.url if person.photo else None,
+#             'Community_ID': community_id  # Retrieved community ID based on person ID
+#         }
+#         return JsonResponse(data)
+#     except Person.DoesNotExist:
+#         return JsonResponse({'error': 'Person not found'}, status=404)
 def person_detail(request, pk):
     try:
         person = Person.objects.get(pk=pk)
         users_in_community = UsersInCommunity.objects.filter(
-            person_id=pk).first()
-        community_id = users_in_community.Community_ID.Community_ID if users_in_community else None
+            person_id=pk)
+        community_ids = [
+            u.Community_ID.Community_ID for u in users_in_community]
 
         data = {
             'id': person.pk,
@@ -70,7 +92,7 @@ def person_detail(request, pk):
             'created_at': person.created_at,
             'email': person.email,
             'photo_url': person.photo.url if person.photo else None,
-            'Community_ID': community_id  # Retrieved community ID based on person ID
+            'Community_IDs': community_ids  # List of community IDs associated with the person
         }
         return JsonResponse(data)
     except Person.DoesNotExist:
@@ -129,6 +151,13 @@ def create_community(request):
         data = json.loads(request.body)
         # Assuming no data is needed to create a community
         community = Community.objects.create()
+        person_id = data.get('person_id')
+        join_date = timezone.now().date()  # Set join_date to current date
+        person = Person.objects.get(pk=person_id)
+        print(community)
+        user_in_community = UsersInCommunity(
+            person=person, Community_ID=community, join_date=join_date)
+        user_in_community.save()
         return JsonResponse({'message': 'Community created successfully', 'Community_ID': community.Community_ID})
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -725,3 +754,40 @@ def admin_login_history(request, admin_id):
             return JsonResponse({'error': "error"})
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+# views.py
+
+
+@csrf_exempt  # CSRF exemption to allow cross-origin POST requests
+def contact_view(request):
+    if request.method == 'POST':
+        # Parse JSON data from request body
+        try:
+            form_data = json.loads(request.body)
+            first_name = form_data.get('fname')
+            last_name = form_data.get('lname')
+            phoneno = form_data.get('phoneno')
+            email = form_data.get('email')
+            message = form_data.get('message')
+            selected_subject = form_data.get('selectedSubject')
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+        # Create a ContactMessage instance
+        message = ContactMessage(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            phoneno=phoneno,
+            message=message,
+            subject=selected_subject
+        )
+
+        # Save the message instance
+        message.save()
+
+        # Return success response
+        return JsonResponse({'status': 'success', 'message_id': message.id})
+
+    # Return error response for disallowed method
+    return JsonResponse({'error': 'This method is not allowed'}, status=405)
